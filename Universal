@@ -11,165 +11,106 @@ wait(1)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "CamFollowGui"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Enabled = true
-screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+gui.Name = "CamGui"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
 
--- Main draggable frame
-local draggableFrame = Instance.new("Frame")
-draggableFrame.Size = UDim2.new(0, 160, 0, 130)
-draggableFrame.Position = LocalPlayer:GetAttribute("LastGuiPos") or UDim2.new(1, -170, 1, -150)
-draggableFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-draggableFrame.BorderSizePixel = 2
-draggableFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-draggableFrame.Active = true
-draggableFrame.Parent = screenGui
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 160, 0, 130)
+frame.Position = UDim2.new(1, -170, 1, -150)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+frame.Active = true
+frame.Draggable = true
 
--- Lock Camera Button
-local lockButton = Instance.new("TextButton")
-lockButton.Size = UDim2.new(1, -20, 0, 50)
-lockButton.Position = UDim2.new(0, 10, 0, 10)
-lockButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-lockButton.TextColor3 = Color3.new(1, 1, 1)
-lockButton.Font = Enum.Font.SourceSansBold
-lockButton.TextScaled = true
-lockButton.Text = "Lock Look: OFF"
-lockButton.Parent = draggableFrame
+local lockBtn = Instance.new("TextButton", frame)
+lockBtn.Size = UDim2.new(1, -20, 0, 50)
+lockBtn.Position = UDim2.new(0, 10, 0, 10)
+lockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+lockBtn.TextColor3 = Color3.new(1, 1, 1)
+lockBtn.Font = Enum.Font.SourceSansBold
+lockBtn.TextScaled = true
+lockBtn.Text = "Lock: OFF"
 
--- Fast Mode Button
-local fastButton = Instance.new("TextButton")
-fastButton.Size = UDim2.new(1, -20, 0, 40)
-fastButton.Position = UDim2.new(0, 10, 0, 70)
-fastButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-fastButton.TextColor3 = Color3.new(1, 1, 1)
-fastButton.Font = Enum.Font.SourceSans
-fastButton.TextScaled = true
-fastButton.Text = "Fast Mode: OFF"
-fastButton.Parent = draggableFrame
+local fastBtn = Instance.new("TextButton", frame)
+fastBtn.Size = UDim2.new(1, -20, 0, 40)
+fastBtn.Position = UDim2.new(0, 10, 0, 70)
+fastBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+fastBtn.TextColor3 = Color3.new(1, 1, 1)
+fastBtn.Font = Enum.Font.SourceSans
+fastBtn.TextScaled = true
+fastBtn.Text = "Fast: OFF"
 
--- Variables
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Size = UDim2.new(0, 40, 0, 40)
+toggleBtn.Position = UDim2.new(1, -50, 0, 10)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.SourceSans
+toggleBtn.TextScaled = true
+toggleBtn.Text = "X"
+
 local locked = false
-local fastMode = false
+local fast = false
 local target = nil
 local lastUpdate = 0
-local lastInteraction = tick()
+local visible = true
 
--- Get nearest player
-local function getClosestPlayer()
+local function getClosest()
 	local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not myRoot then return nil end
-
 	local closest, shortest = nil, math.huge
-	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local dist = (myRoot.Position - player.Character.HumanoidRootPart.Position).Magnitude
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			local dist = (myRoot.Position - p.Character.HumanoidRootPart.Position).Magnitude
 			if dist < shortest then
 				shortest = dist
-				closest = player
+				closest = p
 			end
 		end
 	end
 	return closest
 end
 
--- Rotate camera to look at target
-RunService.RenderStepped:Connect(function(dt)
+RunService.RenderStepped:Connect(function()
 	if locked and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-		if fastMode and tick() - lastUpdate < 0.1 then return end
+		if fast and tick() - lastUpdate < 0.1 then return end
 		lastUpdate = tick()
-
-		local targetPos = target.Character.HumanoidRootPart.Position
-		local camPos = Camera.CFrame.Position
-		local desired = CFrame.new(camPos, targetPos)
-		Camera.CFrame = Camera.CFrame:Lerp(desired, 0.75)
+		local tPos = target.Character.HumanoidRootPart.Position
+		local cPos = Camera.CFrame.Position
+		local look = CFrame.new(cPos, tPos)
+		Camera.CFrame = Camera.CFrame:Lerp(look, 0.75)
 	end
 end)
 
--- Lock Button
-lockButton.MouseButton1Click:Connect(function()
-	lastInteraction = tick()
+lockBtn.MouseButton1Click:Connect(function()
 	if not locked then
-		target = getClosestPlayer()
+		target = getClosest()
 		if target then
 			locked = true
 			Camera.CameraType = Enum.CameraType.Custom
-			lockButton.Text = "Lock Look: ON"
+			lockBtn.Text = "Lock: ON"
 		end
 	else
 		locked = false
 		target = nil
-		lockButton.Text = "Lock Look: OFF"
+		lockBtn.Text = "Lock: OFF"
 	end
 end)
 
--- Fast Mode Button
-fastButton.MouseButton1Click:Connect(function()
-	lastInteraction = tick()
-	fastMode = not fastMode
-	fastButton.Text = "Fast Mode: " .. (fastMode and "ON" or "OFF")
+fastBtn.MouseButton1Click:Connect(function()
+	fast = not fast
+	fastBtn.Text = "Fast: " .. (fast and "ON" or "OFF")
 end)
 
--- Auto fade when idle
-RunService.Stepped:Connect(function()
-	local idleTime = tick() - lastInteraction
-	local targetAlpha = idleTime > 5 and 0.3 or 1
-	local currentAlpha = draggableFrame.BackgroundTransparency
-	local newAlpha = currentAlpha + (targetAlpha - currentAlpha) * 0.1
-
-	draggableFrame.BackgroundTransparency = newAlpha
-	lockButton.BackgroundTransparency = newAlpha
-	fastButton.BackgroundTransparency = newAlpha
-	lockButton.TextTransparency = newAlpha
-	fastButton.TextTransparency = newAlpha
-end)
-
--- Track interaction
-for _, obj in ipairs({draggableFrame, lockButton, fastButton}) do
-	obj.InputBegan:Connect(function()
-		lastInteraction = tick()
-	end)
-end
-
--- Smooth dragging system
-local dragging = false
-local dragOffset = Vector2.new()
-local dragSpeed = 0.2 -- Slower than finger
-
-draggableFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragOffset = Vector2.new(input.Position.X, input.Position.Y) - draggableFrame.AbsolutePosition
-		lastInteraction = tick()
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-		LocalPlayer:SetAttribute("LastGuiPos", draggableFrame.Position)
-	end
-end)
-
-RunService.RenderStepped:Connect(function()
-	if dragging then
-		local mousePos = UserInputService:GetMouseLocation()
-		local newPos = UDim2.new(0, mousePos.X - dragOffset.X, 0, mousePos.Y - dragOffset.Y)
-		local currentPos = draggableFrame.Position
-
-		-- Smooth slow drag
-		draggableFrame.Position = UDim2.new(
-			0,
-			currentPos.X.Offset + (newPos.X.Offset - currentPos.X.Offset) * dragSpeed,
-			0,
-			currentPos.Y.Offset + (newPos.Y.Offset - currentPos.Y.Offset) * dragSpeed
-		)
-	end
+toggleBtn.MouseButton1Click:Connect(function()
+	visible = not visible
+	frame.Visible = visible
+	frame.Draggable = visible
+	toggleBtn.Text = visible and "X" or "O"
 end)
