@@ -11,101 +11,140 @@ wait(1)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
 
--- Screen GUI
+-- GUI Setup
 local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-gui.Name = "CamGui"
+gui.Name = "CamFollowGui"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 
--- Main draggable frame
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 160, 0, 120)
-frame.Position = UDim2.new(1, -170, 1, -150)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+-- Main Frame
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 160, 0, 130)
+frame.Position = gui:GetAttribute("SavedPos") or UDim2.new(1, -170, 1, -150)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 frame.Active = true
 frame.Draggable = true
-frame.Parent = gui
 
--- Restore last position
-local savedPos = gui:GetAttribute("SavedPosition")
-if savedPos then frame.Position = savedPos end
 frame.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		gui:SetAttribute("SavedPosition", frame.Position)
+		gui:SetAttribute("SavedPos", frame.Position)
 	end
 end)
 
--- Lock button
-local lockBtn = Instance.new("TextButton")
-lockBtn.Size = UDim2.new(1, -20, 0, 45)
+-- Lock Button
+local lockBtn = Instance.new("TextButton", frame)
+lockBtn.Size = UDim2.new(1, -20, 0, 50)
 lockBtn.Position = UDim2.new(0, 10, 0, 10)
 lockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 lockBtn.TextColor3 = Color3.new(1, 1, 1)
 lockBtn.Font = Enum.Font.SourceSansBold
 lockBtn.TextScaled = true
 lockBtn.Text = "Lock: OFF"
-lockBtn.Parent = frame
 
--- Fast mode button
-local fastBtn = Instance.new("TextButton")
-fastBtn.Size = UDim2.new(1, -20, 0, 35)
-fastBtn.Position = UDim2.new(0, 10, 0, 65)
-fastBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+-- Fast Mode Button
+local fastBtn = Instance.new("TextButton", frame)
+fastBtn.Size = UDim2.new(1, -20, 0, 40)
+fastBtn.Position = UDim2.new(0, 10, 0, 70)
+fastBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 fastBtn.TextColor3 = Color3.new(1, 1, 1)
 fastBtn.Font = Enum.Font.SourceSans
 fastBtn.TextScaled = true
 fastBtn.Text = "Fast: OFF"
-fastBtn.Parent = frame
 
--- Minimize button
-local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
-minimizeBtn.Position = UDim2.new(1, -30, 0, 5)
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-minimizeBtn.Text = "-"
-minimizeBtn.TextScaled = true
-minimizeBtn.TextColor3 = Color3.new(1,1,1)
-minimizeBtn.Font = Enum.Font.SourceSansBold
-minimizeBtn.Parent = frame
+-- Collapse Button
+local collapseBtn = Instance.new("TextButton", frame)
+collapseBtn.Size = UDim2.new(0, 30, 0, 30)
+collapseBtn.Position = UDim2.new(1, -35, 0, 5)
+collapseBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+collapseBtn.Text = "-"
+collapseBtn.TextColor3 = Color3.new(1, 1, 1)
+collapseBtn.Font = Enum.Font.SourceSansBold
+collapseBtn.TextScaled = true
 
--- Mini toggle button (draggable)
-local miniBtn = Instance.new("TextButton")
-miniBtn.Size = UDim2.new(0, 50, 0, 30)
-miniBtn.Position = UDim2.new(1, -60, 1, -40)
+-- Minimized Button
+local miniBtn = Instance.new("TextButton", gui)
+miniBtn.Size = UDim2.new(0, 60, 0, 30)
+miniBtn.Position = gui:GetAttribute("MiniPos") or UDim2.new(1, -70, 1, -40)
 miniBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 miniBtn.Text = "+"
-miniBtn.TextScaled = true
-miniBtn.TextColor3 = Color3.new(1,1,1)
+miniBtn.TextColor3 = Color3.new(1, 1, 1)
 miniBtn.Font = Enum.Font.SourceSansBold
+miniBtn.TextScaled = true
 miniBtn.Visible = false
-miniBtn.Active = true
 miniBtn.Draggable = true
-miniBtn.Parent = gui
 
--- States
-local locked = false
-local fastMode = false
+miniBtn.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		gui:SetAttribute("MiniPos", miniBtn.Position)
+	end
+end)
+
+-- Crosshair Dot
+local centerDot = Instance.new("Frame", gui)
+centerDot.Size = UDim2.new(0, 6, 0, 6)
+centerDot.Position = UDim2.new(0.5, -3, 0.5, -3)
+centerDot.BackgroundColor3 = Color3.new(1, 1, 1)
+centerDot.BorderSizePixel = 0
+centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+centerDot.BackgroundTransparency = 0.3
+centerDot.Visible = false  -- Start hidden
+
+-- Fade Transition Function
+local function fade(obj, show, duration)
+	local tweenInfo = TweenInfo.new(duration or 0.25)
+	for _, v in pairs(obj:GetDescendants()) do
+		if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("Frame") then
+			TweenService:Create(v, tweenInfo, {BackgroundTransparency = show and 0 or 1}):Play()
+			if v:IsA("TextLabel") or v:IsA("TextButton") then
+				TweenService:Create(v, tweenInfo, {TextTransparency = show and 0 or 1}):Play()
+			end
+		end
+	end
+end
+
+-- Minimize & Restore
 local minimized = false
-local target = nil
-local lastUpdate = 0
+local function minimize()
+	local abs = collapseBtn.AbsolutePosition
+	miniBtn.Position = UDim2.new(0, abs.X, 0, abs.Y)
+	miniBtn.AnchorPoint = Vector2.new(0, 0)
+	fade(frame, false)
+	wait(0.25)
+	frame.Visible = false
+	miniBtn.Visible = true
+	minimized = true
+end
 
--- Find nearest player
-local function getClosestPlayer()
-	local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-	if not myRoot then return nil end
+local function restore()
+	frame.Visible = true
+	miniBtn.Visible = false
+	fade(frame, true)
+	minimized = false
+end
 
-	local closest = nil
-	local shortest = math.huge
+collapseBtn.MouseButton1Click:Connect(minimize)
+miniBtn.MouseButton1Click:Connect(restore)
+
+-- Lock Camera Function
+local locked, fast = false, false
+local target, lastUpdate = nil, 0
+
+local function getNearest()
+	local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not root then return nil end
+	local closest, dist = nil, math.huge
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-			local dist = (myRoot.Position - p.Character.HumanoidRootPart.Position).Magnitude
-			if dist < shortest then
-				shortest = dist
+			local d = (root.Position - p.Character.HumanoidRootPart.Position).Magnitude
+			if d < dist then
+				dist = d
 				closest = p
 			end
 		end
@@ -113,25 +152,12 @@ local function getClosestPlayer()
 	return closest
 end
 
--- Camera logic
-RunService.RenderStepped:Connect(function()
-	if locked and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-		if fastMode and tick() - lastUpdate < 0.1 then return end
-		lastUpdate = tick()
-
-		local lookPos = target.Character.HumanoidRootPart.Position
-		local camPos = Camera.CFrame.Position
-		local desired = CFrame.new(camPos, lookPos)
-		Camera.CFrame = Camera.CFrame:Lerp(desired, 0.75)
-	end
-end)
-
--- Button logic
 lockBtn.MouseButton1Click:Connect(function()
 	if not locked then
-		target = getClosestPlayer()
+		target = getNearest()
 		if target then
 			locked = true
+			Camera.CameraType = Enum.CameraType.Custom
 			lockBtn.Text = "Lock: ON"
 		end
 	else
@@ -142,18 +168,49 @@ lockBtn.MouseButton1Click:Connect(function()
 end)
 
 fastBtn.MouseButton1Click:Connect(function()
-	fastMode = not fastMode
-	fastBtn.Text = "Fast: " .. (fastMode and "ON" or "OFF")
+	fast = not fast
+	fastBtn.Text = "Fast: " .. (fast and "ON" or "OFF")
 end)
 
-minimizeBtn.MouseButton1Click:Connect(function()
-	minimized = true
-	frame.Visible = false
-	miniBtn.Visible = true
+-- Toggle Crosshair (dot)
+local crosshairVisible = false
+local toggleDotBtn = Instance.new("TextButton", frame)
+toggleDotBtn.Size = UDim2.new(1, -20, 0, 40)
+toggleDotBtn.Position = UDim2.new(0, 10, 0, 110)
+toggleDotBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+toggleDotBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleDotBtn.Font = Enum.Font.SourceSans
+toggleDotBtn.TextScaled = true
+toggleDotBtn.Text = "Toggle Dot: OFF"
+
+toggleDotBtn.MouseButton1Click:Connect(function()
+	crosshairVisible = not crosshairVisible
+	centerDot.Visible = crosshairVisible
+	toggleDotBtn.Text = "Toggle Dot: " .. (crosshairVisible and "ON" or "OFF")
 end)
 
-miniBtn.MouseButton1Click:Connect(function()
-	minimized = false
-	frame.Visible = true
-	miniBtn.Visible = false
+-- Fast Mode Toggle
+RunService.RenderStepped:Connect(function()
+	if locked and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+		if fast and tick() - lastUpdate < 0.1 then return end
+		lastUpdate = tick()
+		local targetPos = target.Character.HumanoidRootPart.Position
+		local currentPos = Camera.CFrame.Position
+		local newCF = CFrame.new(currentPos, targetPos)
+		Camera.CFrame = Camera.CFrame:Lerp(newCF, 0.75)
+	end
+end)
+
+-- Handling Touch Input to Center the Camera
+UserInputService.TouchTap:Connect(function(touchPositions)
+	if #touchPositions > 0 then
+		local touch = touchPositions[1]
+		local center = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+		
+		-- Move the touch to the center (simulating tap at center)
+		pcall(function()
+			local inputObj = Instance.new("InputObject")
+			inputObj.Position = center
+		end)
+	end
 end)
