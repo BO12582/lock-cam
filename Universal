@@ -3,174 +3,187 @@ game:GetService("StarterGui"):SetCore("SendNotification",{
                 Text = "Bohight123",
                  Duration = 15})
 
-if game:GetService("CoreGui"):FindFirstChild("Emotes") then
-    game:GetService("CoreGui"):FindFirstChild("Emotes"):Destroy()
-end
+local plr = game:GetService("Players").LocalPlayer
+local cam = workspace.CurrentCamera
+local rs = game:GetService("RunService")
+local ts = game:GetService("TweenService")
+local uis = game:GetService("UserInputService")
 
-wait(1)
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-
-local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+local gui = Instance.new("ScreenGui", plr:WaitForChild("PlayerGui"))
 gui.Name = "CamLockGui"
+gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 
--- Toggle Button
-local lockBtn = Instance.new("TextButton")
-lockBtn.Size = UDim2.new(0, 100, 0, 30)
+-- Frame
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 160, 0, 130)
+frame.Position = gui:GetAttribute("SavedPos") or UDim2.new(1, -170, 1, -150)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+frame.Active = true
+frame.Draggable = true
+frame.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		gui:SetAttribute("SavedPos", frame.Position)
+	end
+end)
+
+-- Lock Button
+local lockBtn = Instance.new("TextButton", frame)
+lockBtn.Size = UDim2.new(1, -20, 0, 50)
 lockBtn.Position = UDim2.new(0, 10, 0, 10)
-lockBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-lockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-lockBtn.Text = "Lock"
-lockBtn.Parent = gui
+lockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+lockBtn.TextColor3 = Color3.new(1, 1, 1)
+lockBtn.Font = Enum.Font.SourceSansBold
+lockBtn.TextScaled = true
+lockBtn.Text = "Lock: OFF"
 
--- Fold/Unfold Toggle
-local foldBtn = Instance.new("TextButton")
-foldBtn.Size = UDim2.new(0, 30, 0, 30)
-foldBtn.Position = UDim2.new(0, 115, 0, 10)
-foldBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-foldBtn.Text = "-"
-foldBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-foldBtn.Parent = gui
+-- Fast Mode Button
+local fastBtn = Instance.new("TextButton", frame)
+fastBtn.Size = UDim2.new(1, -20, 0, 40)
+fastBtn.Position = UDim2.new(0, 10, 0, 70)
+fastBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+fastBtn.TextColor3 = Color3.new(1, 1, 1)
+fastBtn.Font = Enum.Font.SourceSans
+fastBtn.TextScaled = true
+fastBtn.Text = "Fast: OFF"
 
--- Dot
-local dot = Instance.new("Frame")
-dot.Size = UDim2.new(0, 6, 0, 6)
-dot.Position = UDim2.new(0.5, -3, 0.5, -3)
-dot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-dot.BorderSizePixel = 0
-dot.Visible = false
-dot.Parent = gui
+-- Collapse Button
+local collapse = Instance.new("TextButton", frame)
+collapse.Size = UDim2.new(0, 30, 0, 30)
+collapse.Position = UDim2.new(1, -35, 0, 5)
+collapse.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+collapse.Text = "-"
+collapse.TextColor3 = Color3.new(1, 1, 1)
+collapse.Font = Enum.Font.SourceSansBold
+collapse.TextScaled = true
 
--- Dragging
-local dragging, dragOffset = false, Vector2.new()
-lockBtn.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragOffset = input.Position - lockBtn.Position
+-- Mini Button
+local mini = Instance.new("TextButton", gui)
+mini.Size = UDim2.new(0, 60, 0, 30)
+mini.Position = gui:GetAttribute("MiniPos") or UDim2.new(1, -70, 1, -40)
+mini.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+mini.Text = "+"
+mini.TextColor3 = Color3.new(1, 1, 1)
+mini.Font = Enum.Font.SourceSansBold
+mini.TextScaled = true
+mini.Visible = false
+mini.Draggable = true
+mini.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+		gui:SetAttribute("MiniPos", mini.Position)
 	end
 end)
-lockBtn.InputChanged:Connect(function(input)
-	if dragging then
-		lockBtn.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
-		foldBtn.Position = lockBtn.Position + UDim2.new(0, 105, 0, 0)
+
+-- Fade Function
+local function fade(obj, show)
+	for _, v in pairs(obj:GetDescendants()) do
+		if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("Frame") then
+			ts:Create(v, TweenInfo.new(0.25), {
+				BackgroundTransparency = show and 0 or 1,
+				TextTransparency = v:IsA("TextLabel") or v:IsA("TextButton") and (show and 0 or 1)
+			}):Play()
+		end
 	end
-end)
-lockBtn.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch then dragging = false end
-end)
-
--- State
-local locked, target, fast = false, nil, false
-local highlight, outline, lastUpdate
-
--- Obstacle Check
-local function isBlocked(player)
-	local camPos = Camera.CFrame.Position
-	local targetPos = player.Character.HumanoidRootPart.Position
-	local direction = (targetPos - camPos).Unit * (targetPos - camPos).Magnitude
-	local ray = Ray.new(camPos, direction)
-	local hit = workspace:FindPartOnRay(ray, LocalPlayer.Character)
-	return hit ~= nil
 end
 
--- Highlight Player
-local function highlightPlayer(player)
-	local sb = Instance.new("SelectionBox")
-	sb.Adornee = player.Character.HumanoidRootPart
-	sb.Parent = player.Character.HumanoidRootPart
-	sb.Color3 = Color3.fromRGB(255, 0, 0)
-	sb.LineThickness = 0.05
-	sb.SurfaceTransparency = 0.5
-	return sb
-end
-
--- Black Outline
-local function createOutline()
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0, 100, 0, 100)
-	frame.Position = UDim2.new(0.5, -50, 0.5, -50)
-	frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	frame.BackgroundTransparency = 0.8
-	frame.BorderSizePixel = 5
+-- Minimize
+local minimized = false
+local function minimize()
+	local abs = collapse.AbsolutePosition
+	mini.Position = UDim2.new(0, abs.X, 0, abs.Y)
+	mini.AnchorPoint = Vector2.new(0, 0)
+	fade(frame, false)
+	wait(0.25)
 	frame.Visible = false
-	frame.Parent = gui
-	return frame
+	mini.Visible = true
+	minimized = true
 end
 
--- Lock Toggle
-lockBtn.MouseButton1Click:Connect(function()
-	locked = not locked
-	if locked then
-		for _, p in pairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-				target = p
-				break
+local function restore()
+	frame.Visible = true
+	mini.Visible = false
+	fade(frame, true)
+	minimized = false
+end
+
+collapse.MouseButton1Click:Connect(minimize)
+mini.MouseButton1Click:Connect(restore)
+
+-- Lock Logic
+local locked, fast, target, lastUpdate = false, false, nil, 0
+
+local function getNearest()
+	local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+	if not root then return nil end
+	local nearest, dist = nil, math.huge
+	for _, p in pairs(game.Players:GetPlayers()) do
+		if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			local d = (root.Position - p.Character.HumanoidRootPart.Position).Magnitude
+			if d < dist then
+				dist = d
+				nearest = p
 			end
 		end
+	end
+	return nearest
+end
+
+lockBtn.MouseButton1Click:Connect(function()
+	if not locked then
+		target = getNearest()
+		if target then
+			locked = true
+			cam.CameraType = Enum.CameraType.Custom
+			lockBtn.Text = "Lock: ON"
+		end
 	else
+		locked = false
 		target = nil
-		if highlight then highlight:Destroy() highlight = nil end
-		if outline then outline:Destroy() outline = nil end
+		lockBtn.Text = "Lock: OFF"
 	end
 end)
 
--- Fold Toggle
-foldBtn.MouseButton1Click:Connect(function()
-	local isVisible = lockBtn.Visible
-	lockBtn.Visible = not isVisible
-	foldBtn.Text = isVisible and "+" or "-"
-	foldBtn.Position = isVisible and lockBtn.Position or foldBtn.Position
+fastBtn.MouseButton1Click:Connect(function()
+	fast = not fast
+	fastBtn.Text = "Fast: " .. (fast and "ON" or "OFF")
 end)
 
--- Toggle Dot on tap
-gui.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch then
-		dot.Visible = not dot.Visible
-		if dot.Visible then input.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) end
-	end
-end)
-
--- Player Auto Reset
-Players.PlayerAdded:Connect(function(p)
-	p.CharacterAdded:Connect(function()
-		if p == target then
-			highlight = highlightPlayer(p)
-			outline = createOutline()
-		end
-	end)
-	p.CharacterRemoving:Connect(function()
-		if p == target then
-			if highlight then highlight:Destroy() highlight = nil end
-			if outline then outline:Destroy() outline = nil end
-		end
-	end)
-end)
-
--- Camera Follow
-RunService.RenderStepped:Connect(function()
+rs.RenderStepped:Connect(function()
 	if locked and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-		if isBlocked(target) then
-			lockBtn.Text = "Blocked"
-			return
+		local root = target.Character.HumanoidRootPart
+		local origin = cam.CFrame.Position
+		local dir = (root.Position - origin)
+		local ray = workspace:Raycast(origin, dir, RaycastParams.new())
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Blacklist
+		params.FilterDescendantsInstances = {plr.Character, target.Character}
+		params.IgnoreWater = true
+
+		local result = workspace:Raycast(origin, dir.Unit * dir.Magnitude, params)
+		if not result then
+			if fast and tick() - lastUpdate < 0.1 then return end
+			lastUpdate = tick()
+			cam.CFrame = cam.CFrame:Lerp(CFrame.new(origin, root.Position), 0.75)
 		end
-
-		lockBtn.Text = "Locked"
-		if fast and tick() - (lastUpdate or 0) < 0.1 then return end
-		lastUpdate = tick()
-		local tPos = target.Character.HumanoidRootPart.Position
-		local cPos = Camera.CFrame.Position
-		Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(cPos, tPos), 0.75)
-
-		if not highlight then highlight = highlightPlayer(target) end
-		if not outline then outline = createOutline() end
-		outline.Visible = true
-	else
-		lockBtn.Text = "Lock"
-		if highlight then highlight:Destroy() highlight = nil end
-		if outline then outline:Destroy() outline = nil end
 	end
+end)
+
+-- Crosshair
+local dot = Instance.new("Frame", gui)
+dot.Size = UDim2.new(0, 6, 0, 6)
+dot.Position = UDim2.new(0.5, -3, 0.5, -3)
+dot.BackgroundColor3 = Color3.new(1, 1, 1)
+dot.BorderSizePixel = 0
+dot.AnchorPoint = Vector2.new(0.5, 0.5)
+dot.BackgroundTransparency = 0.3
+
+-- Touch = center
+uis.TouchTap:Connect(function()
+	local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+	pcall(function()
+		local dummyInput = Instance.new("InputObject")
+		dummyInput.Position = center
+	end)
 end)
