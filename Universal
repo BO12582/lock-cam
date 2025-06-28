@@ -1,189 +1,209 @@
-game:GetService("StarterGui"):SetCore("SendNotification",{
-                Title = "Credit",
-                Text = "Bohight123",
-                 Duration = 15})
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification",{
+        Title = "lock cam V5",
+        Text = "Final script",
+        Duration = 15
+    })
+end)
 
 local plr = game:GetService("Players").LocalPlayer
 local cam = workspace.CurrentCamera
 local rs = game:GetService("RunService")
-local ts = game:GetService("TweenService")
 local uis = game:GetService("UserInputService")
 
 local gui = Instance.new("ScreenGui", plr:WaitForChild("PlayerGui"))
-gui.Name = "CamLockGui"
+gui.Name = "CamLockGui_V5"
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 
--- Frame
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 160, 0, 130)
-frame.Position = gui:GetAttribute("SavedPos") or UDim2.new(1, -170, 1, -150)
+frame.Size = UDim2.new(0, 210, 0, 340)
+frame.Position = gui:GetAttribute("SavedPos") or UDim2.new(1, -220, 1, -360)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.BorderSizePixel = 2
 frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 frame.Active = true
 frame.Draggable = true
 frame.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-		gui:SetAttribute("SavedPos", frame.Position)
-	end
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        gui:SetAttribute("SavedPos", frame.Position)
+    end
 end)
 
--- Lock Button
-local lockBtn = Instance.new("TextButton", frame)
-lockBtn.Size = UDim2.new(1, -20, 0, 50)
-lockBtn.Position = UDim2.new(0, 10, 0, 10)
-lockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-lockBtn.TextColor3 = Color3.new(1, 1, 1)
-lockBtn.Font = Enum.Font.SourceSansBold
-lockBtn.TextScaled = true
-lockBtn.Text = "Lock: OFF"
+local lockNearestBtn = Instance.new("TextButton", frame)
+lockNearestBtn.Name = "LockNearest"
+lockNearestBtn.Size = UDim2.new(0.5, -10, 0, 30); lockNearestBtn.Position = UDim2.new(0, 10, 0, 10)
+lockNearestBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50); lockNearestBtn.TextColor3 = Color3.new(1, 1, 1)
+lockNearestBtn.Font = Enum.Font.SourceSansBold; lockNearestBtn.TextSize = 12; lockNearestBtn.Text = "Khóa Gần Nhất"
 
--- Fast Mode Button
+local lockOnAimBtn = Instance.new("TextButton", frame)
+lockOnAimBtn.Name = "LockOnAim"
+lockOnAimBtn.Size = UDim2.new(0.5, -10, 0, 30); lockOnAimBtn.Position = UDim2.new(0.5, 0, 0, 10)
+lockOnAimBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50); lockOnAimBtn.TextColor3 = Color3.new(1, 1, 1)
+lockOnAimBtn.Font = Enum.Font.SourceSansBold; lockOnAimBtn.TextSize = 12; lockOnAimBtn.Text = "Khóa Tâm Ngắm"
+
 local fastBtn = Instance.new("TextButton", frame)
-fastBtn.Size = UDim2.new(1, -20, 0, 40)
-fastBtn.Position = UDim2.new(0, 10, 0, 70)
-fastBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-fastBtn.TextColor3 = Color3.new(1, 1, 1)
-fastBtn.Font = Enum.Font.SourceSans
-fastBtn.TextScaled = true
-fastBtn.Text = "Fast: OFF"
+fastBtn.Size = UDim2.new(1, -20, 0, 30); fastBtn.Position = UDim2.new(0, 10, 0, 45)
+fastBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); fastBtn.TextColor3 = Color3.new(1, 1, 1)
+fastBtn.Font = Enum.Font.SourceSans; fastBtn.TextScaled = true; fastBtn.Text = "Fast: OFF"
 
--- Collapse Button
-local collapse = Instance.new("TextButton", frame)
-collapse.Size = UDim2.new(0, 30, 0, 30)
-collapse.Position = UDim2.new(1, -35, 0, 5)
-collapse.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-collapse.Text = "-"
-collapse.TextColor3 = Color3.new(1, 1, 1)
-collapse.Font = Enum.Font.SourceSansBold
-collapse.TextScaled = true
+local disabledPlayers = {} 
+local playerListFrame = Instance.new("ScrollingFrame", frame)
+playerListFrame.Size = UDim2.new(1, -50, 0, 240)
+playerListFrame.Position = UDim2.new(0, 10, 0, 85)
+playerListFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+playerListFrame.BorderSizePixel = 0
+playerListFrame.ScrollBarImageColor3 = Color3.fromRGB(200, 200, 200)
+playerListFrame.ScrollBarThickness = 6
 
--- Mini Button
-local mini = Instance.new("TextButton", gui)
-mini.Size = UDim2.new(0, 60, 0, 30)
-mini.Position = gui:GetAttribute("MiniPos") or UDim2.new(1, -70, 1, -40)
-mini.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-mini.Text = "+"
-mini.TextColor3 = Color3.new(1, 1, 1)
-mini.Font = Enum.Font.SourceSansBold
-mini.TextScaled = true
-mini.Visible = false
-mini.Draggable = true
-mini.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-		gui:SetAttribute("MiniPos", mini.Position)
-	end
+local listLayout = Instance.new("UIListLayout", playerListFrame)
+listLayout.Padding = UDim.new(0, 5)
+listLayout.SortOrder = Enum.SortOrder.Name
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    playerListFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
 end)
 
--- Fade Function
-local function fade(obj, show)
-	for _, v in pairs(obj:GetDescendants()) do
-		if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("Frame") then
-			ts:Create(v, TweenInfo.new(0.25), {
-				BackgroundTransparency = show and 0 or 1,
-				TextTransparency = v:IsA("TextLabel") or v:IsA("TextButton") and (show and 0 or 1)
-			}):Play()
-		end
-	end
+local scrollUpBtn = Instance.new("TextButton", frame)
+scrollUpBtn.Size = UDim2.new(0, 30, 0, 30)
+scrollUpBtn.Position = UDim2.new(1, -35, 0, 85)
+scrollUpBtn.Text = "⬆️"
+scrollUpBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+scrollUpBtn.Font = Enum.Font.SourceSansBold
+scrollUpBtn.TextScaled = true
+
+local scrollDownBtn = Instance.new("TextButton", frame)
+scrollDownBtn.Size = UDim2.new(0, 30, 0, 30)
+scrollDownBtn.Position = UDim2.new(1, -35, 1, -45)
+scrollDownBtn.Text = "⬇️"
+scrollDownBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+scrollDownBtn.Font = Enum.Font.SourceSansBold
+scrollDownBtn.TextScaled = true
+
+local isScrolling = false
+local scrollDirection = 0
+
+scrollUpBtn.MouseButton1Down:Connect(function() isScrolling = true; scrollDirection = -1 end)
+scrollUpBtn.MouseButton1Up:Connect(function() isScrolling = false end)
+scrollDownBtn.MouseButton1Down:Connect(function() isScrolling = true; scrollDirection = 1 end)
+scrollDownBtn.MouseButton1Up:Connect(function() isScrolling = false end)
+
+rs.RenderStepped:Connect(function(dt)
+    if isScrolling then
+        local currentPos = playerListFrame.CanvasPosition
+        local scrollAmount = 250 * dt
+        playerListFrame.CanvasPosition = Vector2.new(currentPos.X, currentPos.Y + (scrollAmount * scrollDirection))
+    end
+end)
+
+local function updatePlayerList()
+    for _, child in pairs(playerListFrame:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= plr then
+            local playerBtn = Instance.new("TextButton", playerListFrame); playerBtn.Name = p.Name; playerBtn.Size = UDim2.new(1, 0, 0, 25)
+            playerBtn.TextColor3 = Color3.new(1, 1, 1); playerBtn.Font = Enum.Font.SourceSans; playerBtn.TextScaled = true; playerBtn.Text = p.Name
+            local isDisabled = disabledPlayers[p.UserId]
+            playerBtn.BackgroundColor3 = isDisabled and Color3.fromRGB(150, 50, 50) or Color3.fromRGB(50, 150, 50)
+            playerBtn.MouseButton1Click:Connect(function()
+                if disabledPlayers[p.UserId] then disabledPlayers[p.UserId] = nil else disabledPlayers[p.UserId] = true end
+                updatePlayerList()
+            end)
+        end
+    end
 end
 
--- Minimize
-local minimized = false
-local function minimize()
-	local abs = collapse.AbsolutePosition
-	mini.Position = UDim2.new(0, abs.X, 0, abs.Y)
-	mini.AnchorPoint = Vector2.new(0, 0)
-	fade(frame, false)
-	wait(0.25)
-	frame.Visible = false
-	mini.Visible = true
-	minimized = true
-end
+local collapse = Instance.new("TextButton", frame)
+collapse.Size = UDim2.new(0, 30, 0, 30); collapse.Position = UDim2.new(1, -35, 0, 5); collapse.BackgroundColor3 = Color3.fromRGB(80, 80, 80); collapse.Text = "-"; collapse.TextColor3 = Color3.new(1, 1, 1); collapse.Font = Enum.Font.SourceSansBold; collapse.TextScaled = true
+local mini = Instance.new("TextButton", gui)
+mini.Size = UDim2.new(0, 60, 0, 30); mini.Position = gui:GetAttribute("MiniPos") or UDim2.new(1, -70, 1, -40); mini.BackgroundColor3 = Color3.fromRGB(80, 80, 80); mini.Text = "+"; mini.TextColor3 = Color3.new(1, 1, 1); mini.Font = Enum.Font.SourceSansBold; mini.TextScaled = true; mini.Visible = false; mini.Draggable = true
+mini.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then gui:SetAttribute("MiniPos", mini.Position) end end)
+collapse.MouseButton1Click:Connect(function() frame.Visible = false; mini.Visible = true end)
+mini.MouseButton1Click:Connect(function() frame.Visible = true; mini.Visible = false end)
 
-local function restore()
-	frame.Visible = true
-	mini.Visible = false
-	fade(frame, true)
-	minimized = false
-end
-
-collapse.MouseButton1Click:Connect(minimize)
-mini.MouseButton1Click:Connect(restore)
-
--- Lock Logic
 local locked, fast, target, lastUpdate = false, false, nil, 0
+local activeLockMethod = nil
 
-local function getNearest()
-	local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-	if not root then return nil end
-	local nearest, dist = nil, math.huge
-	for _, p in pairs(game.Players:GetPlayers()) do
-		if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-			local d = (root.Position - p.Character.HumanoidRootPart.Position).Magnitude
-			if d < dist then
-				dist = d
-				nearest = p
-			end
-		end
-	end
-	return nearest
+local function getNearestPlayer()
+    local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart"); if not root then return nil end
+    local nearest, dist = nil, math.huge
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= plr and not disabledPlayers[p.UserId] and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local d = (root.Position - p.Character.HumanoidRootPart.Position).Magnitude
+            if d < dist then dist = d; nearest = p end
+        end
+    end
+    return nearest
 end
 
-lockBtn.MouseButton1Click:Connect(function()
-	if not locked then
-		target = getNearest()
-		if target then
-			locked = true
-			cam.CameraType = Enum.CameraType.Custom
-			lockBtn.Text = "Lock: ON"
-		end
-	else
-		locked = false
-		target = nil
-		lockBtn.Text = "Lock: OFF"
-	end
+local function getPointedAtPlayer()
+    local viewportCenter = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+    local ray = cam:ViewportPointToRay(viewportCenter.X, viewportCenter.Y)
+    local params = RaycastParams.new(); params.FilterType = Enum.RaycastFilterType.Blacklist; params.FilterDescendantsInstances = {plr.Character}; params.IgnoreWater = true
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 2000, params)
+    if result and result.Instance then
+        local model = result.Instance:FindFirstAncestorOfClass("Model")
+        if model then
+            local p = game.Players:GetPlayerFromCharacter(model)
+            if p and p ~= plr and not disabledPlayers[p.UserId] then return p end
+        end
+    end
+    return nil
+end
+
+local function updateButtonStates()
+    if locked then
+        if activeLockMethod == "Nearest" then
+            lockNearestBtn.Text = "ĐANG KHÓA"; lockNearestBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            lockOnAimBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80); lockOnAimBtn.Text = "Khóa Tâm Ngắm"
+        elseif activeLockMethod == "Aim" then
+            lockOnAimBtn.Text = "ĐANG KHÓA"; lockOnAimBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            lockNearestBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80); lockNearestBtn.Text = "Khóa Gần Nhất"
+        end
+    else
+        activeLockMethod = nil
+        lockNearestBtn.Text = "Khóa Gần Nhất"; lockNearestBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        lockOnAimBtn.Text = "Khóa Tâm Ngắm"; lockOnAimBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+end
+
+lockNearestBtn.MouseButton1Click:Connect(function()
+    if activeLockMethod == "Aim" then return end
+    locked = not locked; if locked then target = getNearestPlayer(); if not target then locked = false end else target = nil end
+    activeLockMethod = locked and "Nearest" or nil; updateButtonStates()
+end)
+
+lockOnAimBtn.MouseButton1Click:Connect(function()
+    if activeLockMethod == "Nearest" then return end
+    locked = not locked; if locked then target = getPointedAtPlayer(); if not target then locked = false end else target = nil end
+    activeLockMethod = locked and "Aim" or nil; updateButtonStates()
 end)
 
 fastBtn.MouseButton1Click:Connect(function()
-	fast = not fast
-	fastBtn.Text = "Fast: " .. (fast and "ON" or "OFF")
+    fast = not fast; fastBtn.Text = "Fast: " .. (fast and "ON" or "OFF")
 end)
 
-rs.RenderStepped:Connect(function()
-	if locked and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-		local root = target.Character.HumanoidRootPart
-		local origin = cam.CFrame.Position
-		local dir = (root.Position - origin)
-		local ray = workspace:Raycast(origin, dir, RaycastParams.new())
-		local params = RaycastParams.new()
-		params.FilterType = Enum.RaycastFilterType.Blacklist
-		params.FilterDescendantsInstances = {plr.Character, target.Character}
-		params.IgnoreWater = true
+local function updateCamera()
+    if locked and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        if disabledPlayers[target.UserId] then target = nil; locked = false; updateButtonStates(); return end
+        cam.CameraType = Enum.CameraType.Custom
+        local root = target.Character.HumanoidRootPart; local origin = cam.CFrame.Position; local dir = (root.Position - origin)
+        local params = RaycastParams.new(); params.FilterType = Enum.RaycastFilterType.Blacklist; params.FilterDescendantsInstances = {plr.Character, target.Character}; params.IgnoreWater = true
+        local result = workspace:Raycast(origin, dir.Unit * dir.Magnitude, params)
+        if not result then
+            if fast and tick() - lastUpdate < 0.1 then return end
+            lastUpdate = tick(); cam.CFrame = cam.CFrame:Lerp(CFrame.new(origin, root.Position), 0.75)
+        end
+    elseif locked then
+        target = nil; locked = false; updateButtonStates()
+    else
+        if cam.CameraType == Enum.CameraType.Custom then cam.CameraType = Enum.CameraType.Track end
+    end
+end
+rs:BindToRenderStep("CamLockV5", Enum.RenderPriority.Camera.Value + 1, updateCamera)
 
-		local result = workspace:Raycast(origin, dir.Unit * dir.Magnitude, params)
-		if not result then
-			if fast and tick() - lastUpdate < 0.1 then return end
-			lastUpdate = tick()
-			cam.CFrame = cam.CFrame:Lerp(CFrame.new(origin, root.Position), 0.75)
-		end
-	end
-end)
-
--- Crosshair
 local dot = Instance.new("Frame", gui)
-dot.Size = UDim2.new(0, 6, 0, 6)
-dot.Position = UDim2.new(0.5, -3, 0.5, -3)
-dot.BackgroundColor3 = Color3.new(1, 1, 1)
-dot.BorderSizePixel = 0
-dot.AnchorPoint = Vector2.new(0.5, 0.5)
-dot.BackgroundTransparency = 0.3
+dot.Size = UDim2.new(0, 4, 0, 4); dot.Position = UDim2.new(0.5, -2, 0.5, -2); dot.BackgroundColor3 = Color3.new(1, 1, 1); dot.BorderSizePixel = 0; dot.AnchorPoint = Vector2.new(0.5, 0.5); dot.BackgroundTransparency = 0.3
 
--- Touch = center
-uis.TouchTap:Connect(function()
-	local center = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
-	pcall(function()
-		local dummyInput = Instance.new("InputObject")
-		dummyInput.Position = center
-	end)
-end)
+game.Players.PlayerAdded:Connect(updatePlayerList)
+game.Players.PlayerRemoving:Connect(updatePlayerList)
+
+updatePlayerList()
